@@ -23,11 +23,11 @@ Frog Game is a fun, interactive web-based platformer where players control a fro
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/frog-game.git
+   git clone https://github.com/yourusername/frogformer.git
    ```
 2. Navigate to the project directory:
    ```bash
-   cd frog-game
+   cd frogformer
    ```
 3. Open `index.html` in your web browser.
 
