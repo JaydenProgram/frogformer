@@ -321,7 +321,7 @@ function update(currentTime) {
 }
 
 function placeSpikes() {
-    if (gameState === "gameOver") {
+    if (gameState !== "playing") {
         return;
     }
 
@@ -358,7 +358,7 @@ function placeSpikes() {
 }
 
 function placePlatforms() {
-    if (gameState === "gameOver") {
+    if (gameState !== "playing") {
         return;
     }
 
@@ -380,31 +380,20 @@ function placePlatforms() {
     setTimeout(placePlatforms, randomDelay);
 }
 
-function moveFrog (e) {
+function moveFrog(e) {
     if (e.code === "Enter") {
-        if (gameState === "menu") {
-            gameState = "playing"; // Start the game
+        if (gameState === "menu" || gameState === "gameOver") {
             resetGame(); // Reset game variables
-        } else if (gameState === "gameOver") {
-            gameState = "playing"; // Restart the game
-            resetGame();
+            gameState = "playing"; // Start the game
         }
     }
 
     if (gameState === "playing" && e.code === "Space") {
         if (frog.jumpCount < 2) {
             frog.velocityY = jumpStrength;
-            frog.jumpCount++; // Increment jump count on every jump
-
-            // Set jumping state to true
+            frog.jumpCount++;
             frog.jumping = true;
-
-            // Use the double jump sprite if it's the second jump
-            if (frog.jumpCount === 2) {
-                frog.img = doubleJumpingFrog;
-            } else {
-                frog.img = jumpingFrog;
-            }
+            frog.img = (frog.jumpCount === 2) ? doubleJumpingFrog : jumpingFrog;
         }
     }
 }
@@ -444,6 +433,10 @@ function spawnItem () {
 
 
 function trampolineJump () {
+    if (gameState === "gameOver") {
+        return;
+    }
+
     frog.jumping = true;
     frog.jumpCount = 1;
     frog.velocityY = 2 * jumpStrength;
@@ -490,9 +483,16 @@ function drawGameOverScreen() {
 
 function resetGame() {
     spikeArray = [];
+    itemsArray = [];
     frog.y = frogY;
-    score = 0;
-    gameState = "playing";
+    frog.velocityY = 0; // Reset vertical velocity
+    frog.jumping = false;
+    frog.jumpCount = 0; // Reset jump count
+    score = 0; // Reset score
+    gameState = "playing"; // Ensure we set the game state
+    lastTime = 0; // Reset lastTime for deltaTime calculation
+    accumulatedTime = 0; // Reset accumulated time for frog animation
+    // Reset positions of any other game elements as needed
 }
 
 function detectCollision (a, b) {
