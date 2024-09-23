@@ -127,8 +127,9 @@ window.onload = function () {
         context.drawImage(floor.img, floor.x, floor.y, floor.width, floor.height);
     }
 
-    floor.img = floorImage;
+
     floorImage.onload = function () {
+        floor.img = floorImage;
         requestAnimationFrame(update);
     };
 
