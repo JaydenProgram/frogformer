@@ -1,0 +1,9 @@
+body {
+    text-align: center;
+}
+
+#board {
+    /*background-color: pink;*/
+    background-image: url("images/Background/platformerClouds.png");
+
+}
