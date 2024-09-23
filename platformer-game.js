@@ -18,6 +18,7 @@ let frog = {
     height: frogHeight,
     velocityY: 0,
     jumping: false,
+    jumpCount: 0,
 };
 
 //floor
@@ -46,15 +47,24 @@ let spikeY = frogY + frog.height / 2;
 //trampolines
 let trampolineWidth = 28;
 let trampolineHeight = 28;
+let trampolineAnim = false;
 
 //platforms
 let platformWidth = 32;
 let platformHeight = 8;
 let platformY = frogY - frogHeight;
 
+//items
+let itemsArray = [];
+let itemWidth = 32;
+let itemHeight = 32;
+let itemY ;
+
+//images
 let spikeImage;
 let trampolineImage;
 let platformImage;
+let itemImage;
 
 // sprites
 const spriteWidth = 32;
@@ -64,6 +74,7 @@ let frameY = 0;
 let walkingFrog;
 let jumpingFrog;
 let doubleJumpingFrog;
+let jumpTrampoline;
 
 // physics
 let lastTime = 0;
@@ -113,7 +124,11 @@ function loadImages() {
         requestAnimationFrame(update);
     });
     trampolineImage = loadImage("images/trampoline.png");
+    jumpTrampoline = loadImage("images/trampolineJump.png");
     platformImage = loadImage("images/brown-platform.png");
+    itemImage = loadImage("images/bananas.png", () => {
+      setTimeout(spawnItem, 1500);
+    });
 }
 
 function loadImage(src, onLoad) {
@@ -166,6 +181,7 @@ function update(currentTime) {
         frog.y = boardHeight - frogHeight * 2.5; // Snap frog to the ground level
         frog.jumping = false; // Allow frog to jump again
         frog.velocityY = 0; // Reset vertical velocity when on the ground
+        frog.jumpCount = 0;
     }
 
     // When the first copy of the floor goes off-screen, reset it to the right
@@ -202,8 +218,29 @@ function update(currentTime) {
         // Draw the walking sprite
         context.drawImage(frog.img, frameX * spriteWidth, frameY * spriteHeight, spriteWidth, spriteHeight, frog.x, frog.y, frog.width, frog.height);
     }
+    // Add this after the floor drawing code in the update function
+    for (let i = 0; i < itemsArray.length; i++) {
+        let item = itemsArray[i];
+        itemY = frogY - frogHeight * Math.random() * 5;
+        item.x += velocityX * deltaTime; // Move item based on velocity
+        accumulatedTime += deltaTime;
+        if (accumulatedTime >= frameDuration / 1000) {
+            frameX = (frameX + 1) % 11; // Loop through 11 frames (adjust as needed)
+            accumulatedTime = 0; // Reset the accumulated time
+        }
+        context.drawImage(item.img, frameX * spriteWidth, frameY * spriteHeight, spriteWidth, spriteHeight, item.x, item.y, item.width, item.height);
 
+        if (detectCollision(frog, item)) {
+            score +=2;
+            itemsArray.splice(i, 1);
+        }
 
+    }
+
+    while (itemsArray.length > 0 && itemsArray[0].x < -itemWidth) {
+        itemsArray.shift();
+        console.log("deleted")
+    }
     // Draw and update spikes
     for (let i = 0; i < spikeArray.length; i++) {
         let spike = spikeArray[i];
@@ -225,17 +262,14 @@ function update(currentTime) {
             frog.jumping = false;
             frog.y = spike.y - frog.height; // Position the frog on top of the platform
             frog.velocityY = 0;
-        }
-        // Remove spikes that go off-screen
-        if (spike.x + spike.width < 0) {
-            spikeArray.splice(i, 1);
-            i--; // Adjust index since we removed an element
+            frog.jumpCount = 0;
         }
 
     }
 
     while (spikeArray.length > 0 && spikeArray[0].x < -spikeWidth) {
         spikeArray.shift();
+        console.log("spike deleted")
     }
 
     context.fillStyle = "white";
@@ -253,7 +287,7 @@ function placeSpikes() {
         let trampolines = {
             img: trampolineImage,
             x: spikeX,
-            y: spikeY,
+            y: spikeY - trampolineHeight/2,
             width: trampolineWidth,
             height: trampolineHeight,
             passed: false,
@@ -275,7 +309,7 @@ function placeSpikes() {
 
 
 
-    let randomDelay = Math.random() * (maxDelay * 2 - minDelay) + minDelay;
+    let randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
 
     // Schedule the next spike spawn after the random delay
     setTimeout(placeSpikes, randomDelay);
@@ -298,7 +332,7 @@ function placePlatforms() {
     }
     spikeArray.push(platforms);
 
-    let randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
+    let randomDelay = Math.random() * (maxDelay * 2 - minDelay) + minDelay;
 
     // Schedule the next spike spawn after the random delay
     setTimeout(placePlatforms, randomDelay);
@@ -315,15 +349,48 @@ function moveFrog (e) {
         }
     }
 
-    if (gameState === "playing" && e.code === "Space" && !frog.jumping) {
-        frog.velocityY = jumpStrength;
-        frog.jumping = true;
+    if (gameState === "playing" && e.code === "Space") {
+        if (frog.jumpCount < 2) {
+            frog.velocityY = jumpStrength;
+            frog.jumpCount++; // Increment jump count on every jump
+
+            // Set jumping state to true
+            frog.jumping = true;
+
+            // Use the double jump sprite if it's the second jump
+            if (frog.jumpCount === 2) {
+                frog.img = doubleJumpingFrog;
+            } else {
+                frog.img = jumpingFrog;
+            }
+        }
     }
+}
+
+function spawnItem () {
+    if (gameState === "gameOver") {
+        return;
+    }
+
+    let items = {
+        img: itemImage,
+        x: spikeX,
+        y: itemY,
+        width: itemWidth,
+        height: itemHeight,
+    }
+    itemsArray.push(items)
+    let randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
+
+    // Schedule the next spike spawn after the random delay
+    setTimeout(spawnItem, randomDelay);
 }
 
 function trampolineJump () {
     frog.jumping = true;
+    frog.jumpCount = 1;
     frog.velocityY = 2 * jumpStrength;
+    trampolineAnim = true;
 }
 
 function drawHomeScreen(currentTime) {
@@ -357,7 +424,7 @@ function drawGameOverScreen() {
     context.fillRect(0, 0, boardWidth, boardHeight);
     context.fillStyle = "white";
     context.font = "36px sans-serif";
-    context.fillText("GAME OVER", 50, 100);
+    context.fillText(`GAME OVER : ${score}`, 50, 100);
     context.fillStyle = "white";
     context.font = "24px sans-serif";
     context.fillText("Press Enter to Restart", 100, 200);
