@@ -65,12 +65,17 @@ let spikeImage;
 let trampolineImage;
 let platformImage;
 let itemImage;
+let appleImage;
 
 // sprites
 const spriteWidth = 32;
 const spriteHeight = 32;
 let frameX = 0;
 let frameY = 0;
+let frogFrameX = 0;
+let frogFrameY = 0;
+let itemFrameX = 0;
+let itemFrameY = 0;
 let walkingFrog;
 let jumpingFrog;
 let doubleJumpingFrog;
@@ -78,12 +83,20 @@ let jumpTrampoline;
 
 // physics
 let lastTime = 0;
-let accumulatedTime = 0; // To accumulate time between frames
+let frogAccumulatedTime = 0;
+let itemAccumulatedTime = 0;
+let accumulatedTime = 0;
 const frameDuration = 100; // Duration in milliseconds to switch frames
 let velocityX = -300; // Adjusted pipes moving left speed (in pixels per second)
 let gravity = 0.4;
 let jumpStrength = -7;
 
+
+// boost
+let originalVelocityX = velocityX; // Store the original velocity
+let boostDuration = 500; // Duration of the boost in milliseconds
+let boostActive = false; // Flag to track if the boost is active
+let boostEndTime = 0; // Time when the boost ends
 
 //game
 let gameState = "menu";
@@ -128,6 +141,11 @@ function loadImages() {
     platformImage = loadImage("images/brown-platform.png");
     itemImage = loadImage("images/bananas.png", () => {
       setTimeout(spawnItem, 1500);
+        requestAnimationFrame(update);
+    });
+    appleImage = loadImage("images/apples.png", () => {
+        setTimeout(spawnItem, 1500);
+        requestAnimationFrame(update);
     });
 }
 
@@ -143,7 +161,7 @@ function loadImage(src, onLoad) {
 function update(currentTime) {
     requestAnimationFrame(update);
 
-// Clear the canvas
+    // Clear the canvas
     context.clearRect(0, 0, board.width, board.height);
 
     if (gameState === "menu") {
@@ -198,8 +216,19 @@ function update(currentTime) {
     context.drawImage(floor.img, floor.x2, floor.y, floor.width, floor.height);
 
 
-    // Accumulate the time
-    accumulatedTime += deltaTime;
+    // Save the current context state
+    context.save();
+
+    // Set shadow properties for the glow effect if boost is active
+    if (boostActive) {
+        context.shadowColor = 'rgba(255, 0, 0, 0.8)'; // Red glow color
+        context.shadowBlur = 20; // Size of the glow
+        context.shadowOffsetX = 0; // No offset in X direction
+        context.shadowOffsetY = 0; // No offset in Y direction
+    } else {
+        // Reset shadow properties to avoid glow effect when not active
+        context.shadowColor = 'transparent'; // No shadow
+    }
 
     // Determine which sprite to draw based on the frog's state
     if (frog.jumping) {
@@ -207,39 +236,53 @@ function update(currentTime) {
         context.drawImage(frog.img, frog.x, frog.y, frog.width, frog.height);
     } else {
         frog.img = walkingFrog; // Switch to walking frog sprite
-
-        // Accumulate the time for walking sprite animation
-        accumulatedTime += deltaTime;
-        if (accumulatedTime >= frameDuration / 1000) {
-            frameX = (frameX + 1) % 11; // Loop through 11 frames (adjust as needed)
-            accumulatedTime = 0; // Reset the accumulated time
+        frogAccumulatedTime += deltaTime;
+        if (frogAccumulatedTime >= frameDuration / 1000) {
+            frogFrameX = (frogFrameX + 1) % 12; // Loop through frog frames
+            frogAccumulatedTime = 0; // Reset the frog animation timer
         }
 
-        // Draw the walking sprite
-        context.drawImage(frog.img, frameX * spriteWidth, frameY * spriteHeight, spriteWidth, spriteHeight, frog.x, frog.y, frog.width, frog.height);
+        context.drawImage(frog.img, frogFrameX * spriteWidth, frogFrameY * spriteHeight, spriteWidth, spriteHeight, frog.x, frog.y, frog.width, frog.height);
     }
+
+    context.restore();
+
+    if (boostActive && currentTime >= boostEndTime) {
+        velocityX = originalVelocityX; // Reset to original velocity
+        boostActive = false; // Disable boost
+    }
+
+
     // Add this after the floor drawing code in the update function
     for (let i = 0; i < itemsArray.length; i++) {
         let item = itemsArray[i];
         itemY = frogY - frogHeight * Math.random() * 5;
         item.x += velocityX * deltaTime; // Move item based on velocity
-        accumulatedTime += deltaTime;
-        if (accumulatedTime >= frameDuration / 1000) {
-            frameX = (frameX + 1) % 11; // Loop through 11 frames (adjust as needed)
-            accumulatedTime = 0; // Reset the accumulated time
+        itemAccumulatedTime += deltaTime;
+        if (itemAccumulatedTime >= frameDuration / 1000) {
+            itemFrameX = (itemFrameX + 1) % 17; // Loop through item frames
+            itemAccumulatedTime = 0; // Reset item animation timer
         }
-        context.drawImage(item.img, frameX * spriteWidth, frameY * spriteHeight, spriteWidth, spriteHeight, item.x, item.y, item.width, item.height);
+
+        context.drawImage(item.img, itemFrameX * spriteWidth, itemFrameY * spriteHeight, spriteWidth, spriteHeight, item.x, item.y, item.width, item.height);
 
         if (detectCollision(frog, item)) {
-            score +=2;
-            itemsArray.splice(i, 1);
+            if (!item.powerUp) {
+                score += 2; // Increment score for normal items
+            } else {
+                frog.jumpCount = Math.max(0, frog.jumpCount - 1); // Prevent jumpCount from going negative
+                velocityX -= 200; // Increase velocity for the power-up
+                boostActive = true; // Activate the boost
+                boostEndTime = performance.now() + boostDuration; // Set end time for the boost
+            }
+
+            itemsArray.splice(i, 1); // Remove the item after processing
         }
 
     }
 
     while (itemsArray.length > 0 && itemsArray[0].x < -itemWidth) {
         itemsArray.shift();
-        console.log("deleted")
     }
     // Draw and update spikes
     for (let i = 0; i < spikeArray.length; i++) {
@@ -269,7 +312,6 @@ function update(currentTime) {
 
     while (spikeArray.length > 0 && spikeArray[0].x < -spikeWidth) {
         spikeArray.shift();
-        console.log("spike deleted")
     }
 
     context.fillStyle = "white";
@@ -371,20 +413,35 @@ function spawnItem () {
     if (gameState === "gameOver") {
         return;
     }
+    let itemY = frogY - frogHeight * Math.random() * 5; // Set itemY here, instead of in update()
 
-    let items = {
-        img: itemImage,
-        x: spikeX,
-        y: itemY,
-        width: itemWidth,
-        height: itemHeight,
+    if (Math.random() < 0.1) {
+        let apples = {
+            img: appleImage,
+            x: spikeX,
+            y: itemY,
+            width: itemWidth,
+            height: itemHeight,
+            powerUp: true,
+        }
+        itemsArray.push(apples)
+    } else {
+        let bananas = {
+            img: itemImage,
+            x: spikeX,
+            y: itemY,
+            width: itemWidth,
+            height: itemHeight,
+            powerUp: false,
+        }
+        itemsArray.push(bananas)
     }
-    itemsArray.push(items)
+
     let randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
 
-    // Schedule the next spike spawn after the random delay
     setTimeout(spawnItem, randomDelay);
 }
+
 
 function trampolineJump () {
     frog.jumping = true;
@@ -428,8 +485,6 @@ function drawGameOverScreen() {
     context.fillStyle = "white";
     context.font = "24px sans-serif";
     context.fillText("Press Enter to Restart", 100, 200);
-
-
 }
 
 
