@@ -87,62 +87,43 @@ let highScore = localStorage.getItem('highscore') ? parseInt(localStorage.getIte
 
 
 window.onload = function () {
-    // Get the canvas element by ID
     board = document.getElementById("board");
-
-    // Set the canvas width and height
     board.width = boardWidth;
     board.height = boardHeight;
-
-    //floor
-    floorImage = new Image();
-    floorImage.src = "images/background/platformerBg.png";
-
-    // Get the drawing context
     context = board.getContext("2d");
 
-    frogImage = new Image();
-    frogImage.src = "images/frogJump.png";
+    // Load images
+    loadImages();
+    document.addEventListener("keydown", moveFrog);
+};
 
-    walkingFrog = new Image();
-    walkingFrog.src = "images/frogWalk.png";
-
-    jumpingFrog = new Image();
-    jumpingFrog.src = "images/frogJump.png";
-
-    doubleJumpingFrog = new Image();
-    doubleJumpingFrog.src = "images/frogDoubleJump.png"
-
-    spikeImage = new Image();
-    spikeImage.src = "images/spikes.png";
-
-    trampolineImage = new Image();
-    trampolineImage.src = "images/trampoline.png";
-
-    platformImage = new Image();
-    platformImage.src = "images/brown-platform.png";
-
-    floor.img = floorImage;
-    floorImage.onload = function () {
-        context.drawImage(floor.img, floor.x, floor.y, floor.width, floor.height);
-    }
-
-
-    floorImage.onload = function () {
-        floor.img = floorImage;
+function loadImages() {
+    floorImage = loadImage("images/background/platformerBg.png", (img) => {
+        floor.img = img;
         requestAnimationFrame(update);
-    };
+    });
 
-
-    spikeImage.onload = function () {
+    walkingFrog = loadImage("images/frogWalk.png");
+    jumpingFrog = loadImage("images/frogJump.png");
+    doubleJumpingFrog = loadImage("images/frogDoubleJump.png");
+    spikeImage = loadImage("images/spikes.png", () => {
         let initialDelay = Math.random() * maxDelay; // Initial random delay
         setTimeout(placeSpikes, initialDelay);
         setTimeout(placePlatforms, 1500);
         requestAnimationFrame(update);
-    };
+    });
+    trampolineImage = loadImage("images/trampoline.png");
+    platformImage = loadImage("images/brown-platform.png");
+}
 
-    document.addEventListener("keydown", moveFrog)
-};
+function loadImage(src, onLoad) {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+        if (onLoad) onLoad(img);
+    };
+    return img;
+}
 
 function update(currentTime) {
     requestAnimationFrame(update);
