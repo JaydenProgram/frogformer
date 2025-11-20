@@ -62,12 +62,3 @@ Contributions are welcome! Feel free to submit a pull request or open an issue f
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Special thanks to online resources and communities that helped in developing this game.
-- Icons and images sourced from free image repositories (provide specific sources if necessary).
-
----
-
-Feel free to customize this README with specific details, like your GitHub username or any additional acknowledgments you’d like to include!
